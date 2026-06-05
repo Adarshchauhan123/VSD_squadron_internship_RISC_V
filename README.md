@@ -75,12 +75,9 @@ VSD_squadron_internship_RISC_V/
     ├── 📄 README.md           ← Task-specific notes
     ├── 📝 sum1ton.c           ← C source program
     └── 📁 screenshots/        ← Output screenshots
-        ├── 01_write_code.png
-        ├── 02_cat_code.png
-        ├── 03_gcc_run.png
-        ├── 04_riscv_version.png
-        ├── 05_riscv_compile.png
-        └── 06_objdump_output.png
+        ├── 01_write_code.png  ← C source code in terminal
+        ├── 02_cat_code.png    ← GCC compile & run output
+        └── 03_gcc_run.png     ← RISC-V objdump assembly
 ```
 
 ---
@@ -316,16 +313,27 @@ Compiler does the work      vs   Hardware does more work
 
 ## 📸 Screenshots
 
-> 📌 *Screenshots will be uploaded after recording the demonstration.*
+### 🖊️ Step 1 — C Source Code in Terminal
 
-| Step | Screenshot | Description |
-|------|-----------|-------------|
-| 1 | `screenshots/01_write_code.png` | Writing `sum1ton.c` with nano |
-| 2 | `screenshots/02_cat_code.png` | Viewing source code with cat |
-| 3 | `screenshots/03_gcc_run.png` | Native GCC compile and run |
-| 4 | `screenshots/04_riscv_version.png` | RISC-V GCC version output |
-| 5 | `screenshots/05_riscv_compile.png` | RISC-V cross-compilation |
-| 6 | `screenshots/06_objdump_output.png` | Assembly output from objdump |
+![C source code displayed in terminal](Task_1/screenshots/01_write_code.png)
+
+> The `sum1ton.c` program shown in the terminal: includes `stdio.h`, a `for` loop summing 1 to `n=5`, and a `printf` statement.
+
+---
+
+### ⚙️ Step 2 — Native GCC Compile & Run
+
+![GCC compilation and execution output](Task_1/screenshots/02_cat_code.png)
+
+> Running `gcc sum1ton.c -o sum1ton && ./sum1ton` produces **"sum of numbers from 1 to 5 is 15"** — confirming correct program logic.
+
+---
+
+### 🔬 Step 3 — RISC-V objdump Assembly Output
+
+![RISC-V assembly disassembly from objdump](Task_1/screenshots/03_gcc_run.png)
+
+> The `riscv64-unknown-elf-objdump -d sum1ton.o` output showing the generated RISC-V ELF64 instructions including `addi`, `sd`, `li`, `lui`, `mv`, `auipc`, `jalr`, `ld`, and `ret`.
 
 ---
 
