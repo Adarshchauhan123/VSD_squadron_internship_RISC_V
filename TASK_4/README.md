@@ -1,8 +1,8 @@
-﻿# Task 4 ΓÇö Memory-Mapped GPIO IP: Design & Integration into a FemtoRV32-Style RISC-V SoC
+# Task 4 -- Memory-Mapped GPIO IP: Design & Integration into a FemtoRV32-Style RISC-V SoC
 
-> **Environment:** GitHub Codespaces ┬╖ `vsdfpga_labs/basicRISCV` lab ┬╖ `riscv.v` (FemtoRV32-style core)  
-> **Toolchain:** Icarus Verilog (`iverilog` / `vvp`) ┬╖ GTKWave (noVNC desktop, port 6080)  
-> **Synthesis flow (reference only):** `synth_ice40` ΓåÆ `nextpnr-ice40` ΓåÆ `icepack`
+> **Environment:** GitHub Codespaces | `vsdfpga_labs/basicRISCV` lab | `riscv.v` (FemtoRV32-style core)
+> **Toolchain:** Icarus Verilog (`iverilog` / `vvp`) | GTKWave (noVNC desktop, port 6080)
+> **Synthesis flow (reference only):** `synth_ice40` -> `nextpnr-ice40` -> `icepack`
 
 ---
 
@@ -11,7 +11,7 @@
 1. [Objective](#1-objective)
 2. [Investigating the Existing SoC](#2-investigating-the-existing-soc)
 3. [GPIO IP Design](#3-gpio-ip-design)
-4. [Integration into `riscv.v`](#4-integration-into-riscvv)
+4. [Integration into riscv.v](#4-integration-into-riscvv)
 5. [Making the Design Simulation-Safe](#5-making-the-design-simulation-safe)
 6. [Standalone IP Verification](#6-standalone-ip-verification)
 7. [Firmware](#7-firmware)
@@ -26,7 +26,7 @@
 - Design a simple **memory-mapped GPIO output/readback register** as a self-contained Verilog IP (`gpio_ip.v`).
 - Integrate it into the SoC's existing memory bus without disturbing the LED and UART peripherals.
 - Verify the IP in isolation with a dedicated testbench.
-- Verify the full path **firmware ΓåÆ CPU ΓåÆ bus ΓåÆ GPIO IP ΓåÆ bus ΓåÆ firmware** with a correct `0xDEADBEEF` write/readback round-trip.
+- Verify the full path **firmware -> CPU -> bus -> GPIO IP -> bus -> firmware** with a correct `0xDEADBEEF` write/readback round-trip.
 - Visualize every bus transaction in GTKWave.
 
 ---
@@ -37,19 +37,19 @@
 
 ```bash
 cat Makefile
-# synth_ice40 ΓåÆ nextpnr-ice40 ΓåÆ icepack ΓÇö hardware targets only, no sim target
+# synth_ice40 -> nextpnr-ice40 -> icepack -- hardware targets only, no sim target
 ```
 
 **Module inventory:**
 
 ```bash
 grep -n "module " *.v
-# riscv.v     ΓåÆ Memory, Processor, SOC
-# clockworks.v ΓåÆ Clockworks
-# emitter_uart.v ΓåÆ corescore_emitter_uart
+# riscv.v      -> Memory, Processor, SOC
+# clockworks.v -> Clockworks
+# emitter_uart.v -> corescore_emitter_uart
 ```
 
-**Bus style check ΓÇö confirmed NOT PicoRV32 handshake:**
+**Bus style check -- confirmed NOT PicoRV32 handshake:**
 
 ```bash
 grep -n "mem_valid\|mem_ready" riscv.v
@@ -60,11 +60,11 @@ grep -n "mem_valid\|mem_ready" riscv.v
 
 ```bash
 grep -n "uart\|led" riscv.v
-# isIO        = mem_addr[22]
-# bit 0  ΓåÆ LEDS
-# bit 1  ΓåÆ UART_DAT
-# bit 2  ΓåÆ UART_CNTL
-# bit 3  ΓåÆ FREE  ΓåÉ GPIO target slot
+# isIO   = mem_addr[22]
+# bit 0  -> LEDS
+# bit 1  -> UART_DAT
+# bit 2  -> UART_CNTL
+# bit 3  -> FREE  <-- GPIO target slot
 ```
 
 `mem_rstrb` is a real top-level signal. The existing UART peripheral was used as the integration template.
@@ -116,19 +116,19 @@ endmodule
 | `gpio_rdata` | out | 32 | Readback data returned to the IO mux |
 | `gpio_out` | out | 32 | Latched output register (drives external GPIO pins) |
 
-The select signal `gpio_sel = isIO & mem_wordaddr[IO_GPIO_bit]` follows the **1-hot decode convention** already used by LEDS, UART_DAT, and UART_CNTL ΓÇö no existing decode logic is touched.
+The select signal `gpio_sel = isIO & mem_wordaddr[IO_GPIO_bit]` follows the **1-hot decode convention** already used by LEDS, UART_DAT, and UART_CNTL -- no existing decode logic is touched.
 
 ---
 
 ## 4. Integration into `riscv.v`
 
-**Step 1 ΓÇö include the IP file** (after the UART include):
+**Step 1 -- include the IP file** (after the UART include):
 
 ```verilog
 `include "gpio_ip.v"
 ```
 
-**Step 2 ΓÇö declare wires and instantiate:**
+**Step 2 -- declare wires and instantiate:**
 
 ```verilog
 wire [31:0] gpio_rdata;
@@ -147,7 +147,7 @@ gpio_ip GPIO(
 );
 ```
 
-**Step 3 ΓÇö extend the IO_rdata mux:**
+**Step 3 -- extend the IO_rdata mux:**
 
 ```verilog
 // Before (UART only):
@@ -161,17 +161,17 @@ assign IO_rdata = mem_wordaddr[IO_UART_CNTL_bit] ? {22'b0, uart_busy, 9'b0}
 
 The LEDS and UART_DAT paths are write-only and unaffected. The UART_CNTL path retains priority.
 
-![Integration in riscv.v ΓÇö gpio_ip instantiation and IO mux extension](ssc3.png)
+![Integration in riscv.v -- gpio_ip instantiation and IO mux extension](ssc3.png)
 
 ---
 
 ## 5. Making the Design Simulation-Safe
 
-Five distinct bugs surfaced when moving from hardware synthesis to `iverilog -DBENCH` simulation. Each is documented as **Bug ΓåÆ Cause ΓåÆ Fix**.
+Five distinct bugs surfaced when moving from hardware synthesis to `iverilog -DBENCH` simulation. Each is documented as **Bug -> Cause -> Fix**.
 
 ---
 
-### Bug 1 ΓÇö `SB_HFOSC` / `SB_PLL40_CORE` unknown module errors
+### Bug 1 -- `SB_HFOSC` / `SB_PLL40_CORE` unknown module errors
 
 **Bug:** `iverilog -DBENCH` aborted with *"Unknown module: SB_HFOSC"* and *"Unknown module: SB_PLL40_CORE"*.
 
@@ -191,11 +191,11 @@ Five distinct bugs surfaced when moving from hardware synthesis to `iverilog -DB
 
 ---
 
-### Bug 2 ΓÇö Duplicate `wire clk` / `reg clk` declaration conflict
+### Bug 2 -- Duplicate `wire clk` / `reg clk` declaration conflict
 
 **Bug:** Compiler error: *"clk: signal already declared"*.
 
-**Cause:** `clk` and `resetn` were already declared as `wire` at the top of the `SOC` module. Adding `reg clk` inside the `\`ifdef BENCH` block created a duplicate.
+**Cause:** `clk` and `resetn` were already declared as `wire` at the top of the `SOC` module. Adding `reg clk` inside the `` `ifdef BENCH `` block created a duplicate.
 
 **Fix:** Made the original declaration conditional:
 
@@ -211,7 +211,7 @@ Five distinct bugs surfaced when moving from hardware synthesis to `iverilog -DB
 
 ---
 
-### Bug 3 ΓÇö Simulation printed one character then froze
+### Bug 3 -- Simulation printed one character then froze
 
 **Bug:** `vvp soc_sim` emitted a single UART character then stalled indefinitely.
 
@@ -233,17 +233,17 @@ end
 
 ---
 
-### Bug 4 ΓÇö UART counter (`cnt`) froze permanently after reset fix
+### Bug 4 -- UART counter (`cnt`) froze permanently after reset fix
 
 **Bug:** After Bug 3's fix, `cnt` incremented once then stopped; UART output stalled mid-string.
 
-**Cause:** The `cnt` and `data` update logic was nested inside the `else if (i_valid & o_ready)` branch ΓÇö it only fired on the cycle a new byte was accepted, never on subsequent clock edges.
+**Cause:** The `cnt` and `data` update logic was nested inside the `else if (i_valid & o_ready)` branch -- it only fired on the cycle a new byte was accepted, never on subsequent clock edges.
 
 **Fix:** Moved the counter/shift-register updates to the outer `else` (non-reset) scope so they run every cycle:
 
 ```verilog
 end else begin
-    cnt  <= cnt - 1;          // always decrement
+    cnt  <= cnt - 1;           // always decrement
     data <= {1'b1, data[9:1]}; // always shift
     if (cnt == 0) begin
         // reload or mark ready
@@ -253,7 +253,7 @@ end
 
 ---
 
-### Bug 5 ΓÇö `cnt[WIDTH]` (done flag) never asserted
+### Bug 5 -- `cnt[WIDTH]` (done flag) never asserted
 
 **Bug:** Even after the structural fix, the done/reload flag `cnt[WIDTH]` never went high; UART locked up in a perpetual countdown.
 
@@ -264,14 +264,14 @@ end
 ```verilog
 // BENCH mode only
 localparam START_VALUE = 60;   // was 64
-localparam WIDTH       = 6;    // was 6 ΓÇö non-power-of-two avoids MSB truncation
+localparam WIDTH       = 6;    // non-power-of-two avoids MSB truncation
 ```
 
 ---
 
 ## 6. Standalone IP Verification
 
-### Testbench (`gpio_tb.v`) ΓÇö key logic
+### Testbench (`gpio_tb.v`) -- key logic
 
 ```verilog
 // Write phase
@@ -305,22 +305,22 @@ PASS: gpio_out correct
 PASS: readback correct
 ```
 
-![Standalone testbench ΓÇö iverilog compile + vvp pass](ssc1.png)
+![Standalone testbench -- iverilog compile and vvp pass](ssc1.png)
 
-![Standalone testbench ΓÇö full terminal output](ss2.png)
+![Standalone testbench -- full terminal output](ss2.png)
 
 ---
 
 ## 7. Firmware
 
-**`io.h` ΓÇö address definition:**
+**`io.h` -- address definition:**
 
 ```c
-// Byte offset = 4 ├ù 2^bit = 4 ├ù 2^3 = 32
+// Byte offset = 4 x 2^bit = 4 x 2^3 = 32
 #define IO_GPIO  32
 ```
 
-**`gpio_test.c` ΓÇö test program:**
+**`gpio_test.c` -- test program:**
 
 ```c
 #include "io.h"
@@ -344,7 +344,7 @@ void gpio_test(void) {
 }
 ```
 
-The firmware uses only standard IO macros already present in the lab template ΓÇö no new UART or memory primitives introduced.
+The firmware uses only standard IO macros already present in the lab template -- no new UART or memory primitives introduced.
 
 ---
 
@@ -364,15 +364,15 @@ Reading back GPIO value: DEADBEEF
 PASS
 ```
 
-![Full-SoC simulation ΓÇö decoded UART output showing PASS](ssc4.png)
+![Full-SoC simulation -- decoded UART output showing PASS](ssc4.png)
 
 This confirms the complete end-to-end path is functional:
 
 ```
-firmware ΓåÆ CPU fetch/decode/execute ΓåÆ memory bus write
-       ΓåÆ gpio_ip latches DEADBEEF into gpio_out
-       ΓåÆ memory bus read ΓåÆ gpio_ip drives gpio_rdata
-       ΓåÆ CPU loads gpio_rdata ΓåÆ firmware compares ΓåÆ UART prints PASS
+firmware -> CPU fetch/decode/execute -> memory bus write
+         -> gpio_ip latches DEADBEEF into gpio_out
+         -> memory bus read -> gpio_ip drives gpio_rdata
+         -> CPU loads gpio_rdata -> firmware compares -> UART prints PASS
 ```
 
 ---
@@ -387,17 +387,17 @@ mem_wordaddr[29:0]  mem_wdata[31:0]
 gpio_out[31:0]  gpio_rdata[31:0]
 ```
 
-![GTKWave ΓÇö gpio_tb.vcd full waveform trace](ssc5.png)
+![GTKWave -- gpio_tb.vcd full waveform trace](ssc5.png)
 
 ### Trace walkthrough
 
 | Event | Observable on trace |
 |-------|---------------------|
 | **Reset release** | `resetn` deasserts (goes high); `gpio_out` and `gpio_rdata` are `00000000` |
-| **Address setup** | `mem_wordaddr` transitions to `00000008` ΓÇö binary `...001000`, confirming **bit 3** is set |
+| **Address setup** | `mem_wordaddr` transitions to `00000008` -- binary `...001000`, confirming **bit 3** is set |
 | **Write transaction** | `isIO` high, `mem_wstrb` pulses, `mem_wdata` = `DEADBEEF`; on the next rising edge `gpio_out` captures `DEADBEEF` |
 | **Read transaction** | `mem_rstrb` pulses; on the following edge `gpio_rdata` is updated to `DEADBEEF` |
-| **Consistency** | `gpio_out` and `gpio_rdata` remain stable at `DEADBEEF` ΓÇö no spurious toggling |
+| **Consistency** | `gpio_out` and `gpio_rdata` remain stable at `DEADBEEF` -- no spurious toggling |
 
 The one-clock latency between the write strobe and `gpio_out` update, and between the read strobe and `gpio_rdata` update, is the expected registered (synchronous) behaviour of the IP.
 
@@ -411,7 +411,7 @@ The one-clock latency between the write strobe and `gpio_out` update, and betwee
 |---|---------|-----------|-----|
 | 1 | `SB_HFOSC` / `SB_PLL40_CORE` unknown | FPGA primitives not in Icarus | Guard with `` `ifndef BENCH `` |
 | 2 | Duplicate `clk` declaration | `wire` + `reg` both declared | Conditional declaration with `` `ifdef BENCH `` |
-| 3 | UART output froze after 1 char | `o_ready` uninitialized ΓÇö no reset handler | Add reset branch to UART always-block |
+| 3 | UART output froze after 1 char | `o_ready` uninitialized -- no reset handler | Add reset branch to UART always-block |
 | 4 | UART counter stuck | `cnt`/`data` updates inside wrong branch | Move updates to outer `else` scope |
 | 5 | Done flag never asserted | Power-of-two `START_VALUE` caused MSB truncation | Use non-power-of-two baud divisor (60) |
 
@@ -419,13 +419,13 @@ The one-clock latency between the write strobe and `gpio_out` update, and betwee
 
 | Check | Result |
 |-------|--------|
-| Standalone `gpio_tb` | Γ£à PASS ΓÇö `gpio_out` = `gpio_rdata` = `0xDEADBEEF` |
-| Full-SoC UART decode | Γ£à PASS ΓÇö firmware prints `DEADBEEF` + `PASS` |
-| GTKWave waveform | Γ£à All bus transactions match expected timing |
-| Hardware synthesis / bitstream | Γ¼£ Out of scope (marked optional, no grading impact) |
+| Standalone `gpio_tb` | PASS -- `gpio_out` = `gpio_rdata` = `0xDEADBEEF` |
+| Full-SoC UART decode | PASS -- firmware prints `DEADBEEF` + `PASS` |
+| GTKWave waveform | PASS -- all bus transactions match expected timing |
+| Hardware synthesis / bitstream | Out of scope (marked optional, no grading impact) |
 
 The GPIO IP adheres strictly to the SoC's 1-hot IO decode convention and introduces no changes to existing peripheral logic. The five bugs fixed span two environment-level issues (missing simulation guards) and three RTL/timing issues (uninitialized state, misplaced logic, integer bit-width edge case), each diagnosed and resolved through targeted inspection of simulation behaviour.
 
 ---
 
-*VSD Squadron Internship ΓÇö RISC-V Track | Task 4*
+*VSD Squadron Internship -- RISC-V Track | Task 4*
