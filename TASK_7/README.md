@@ -1,13 +1,12 @@
 # SPI Master IP — VSDSquadron FPGA (iCE40UP5K-SG48)
 
-> **Task-7 | VSD Squadron Internship — RISC-V IP Design**  
-> Commercial-grade IP documentation package for a minimal, memory-mapped SPI Master peripheral.
+> **Task-7 | VSD Squadron Internship — RISC-V IP Design**
 
 ---
 
 ## What Is This?
 
-A fully synthesizable, memory-mapped **SPI Master** IP core designed for the **VSDSquadron FM FPGA** (Lattice iCE40UP5K-SG48). It plugs into the FemtoRV32-style RISC-V SoC (`riscv.v`) as a fourth peripheral alongside GPIO and UART.
+A fully synthesizable, memory-mapped **SPI Master** IP core for the **VSDSquadron FM FPGA** (Lattice iCE40UP5K-SG48). Plugs into the FemtoRV32-style RISC-V SoC (`riscv.v`) as a fourth peripheral alongside GPIO and UART.
 
 | Property | Value |
 |----------|-------|
@@ -39,11 +38,11 @@ cp spi_master.v  vsdfpga_labs/basicRISCV/RTL/
 
 ### 3. Send a byte and read the result
 ```c
-IO_OUT(SPI_TXDATA, 0xA5);               // load TX byte
-IO_OUT(SPI_CTRL, (4 << 8) | 0x3);      // CLKDIV=4, START=1, EN=1
-while (!(IO_IN(SPI_STATUS) & 0x2));     // poll DONE
-IO_OUT(SPI_STATUS, 0x2);               // clear DONE
-uint8_t rx = IO_IN(SPI_RXDATA) & 0xFF; // read received byte
+IO_OUT(SPI_TXDATA, 0xA5);
+IO_OUT(SPI_CTRL, (4 << 8) | 0x3);
+while (!(IO_IN(SPI_STATUS) & 0x2));
+IO_OUT(SPI_STATUS, 0x2);
+uint8_t rx = IO_IN(SPI_RXDATA) & 0xFF;
 ```
 
 ### 4. Add SoC ports and rebuild
@@ -82,13 +81,13 @@ At 12 MHz: CLKDIV=0 → 6 MHz, CLKDIV=4 → 1.2 MHz, CLKDIV=11 → 500 kHz
 
 ## How to Test
 
-### Standalone Testbench (no SoC needed)
+### Standalone Testbench
 ```bash
 cd vsdfpga_labs/basicRISCV/RTL
 iverilog -o spi_tb spi_tb.v spi_master.v
 vvp spi_tb
-# Expected: RXDATA = 0xa5, PASS: SPI loopback correct
 ```
+Expected: `RXDATA = 0xa5, PASS`
 
 ### Full-SoC Simulation
 ```bash
@@ -96,16 +95,16 @@ iverilog -DBENCH -o soc_sim riscv.v
 timeout 120 vvp soc_sim > /tmp/spi_out.txt 2>&1
 cat /tmp/spi_out.txt | tr -cd '[:print:]\n' | grep -v "^t=" | cut -c1 | \
     awk 'NR%2==1' | tr -d '\n' | sed 's/PASS/\nPASS\n/g'
-# Expected: 000000A5 PASS  000000003C PASS
 ```
+Expected: `000000A5 PASS  0000003C PASS`
 
 ### Hardware Flash
 ```bash
 cd vsdfpga_labs/basicRISCV/RTL
 make
 sudo iceprog SOC.bin
-# Expected: VERIFY OK, cdone: high
 ```
+Expected: `VERIFY OK, cdone: high`
 
 ---
 
@@ -125,23 +124,23 @@ sudo iceprog SOC.bin
 
 ```
 TASK_7/
-├── README.md                  ← You are here
+├── README.md
 └── docs/
-    ├── IP_User_Guide.md       ← Feature overview, block diagram, programming model
-    ├── Register_Map.md        ← Complete register reference
-    ├── Integration_Guide.md   ← Step-by-step SoC integration
-    └── Example_Usage.md       ← Ready-to-run C firmware examples
+    ├── IP_User_Guide.md
+    ├── Register_Map.md
+    ├── Integration_Guide.md
+    └── Example_Usage.md
 ```
 
 ---
 
 ## Known Limitations
 
-- **Single-byte only** — no burst transfers, no DMA support
-- **Mode 0 only** — CPOL=0, CPHA=0; no software-selectable mode
-- **Polling only** — no interrupt output; CPU must poll `SPI_STATUS`
-- **One chip select** — single `CS_N` output, no multi-slave support
-- **12 MHz system clock assumed** — CLKDIV examples calibrated for 12 MHz input
+- Single-byte only — no burst transfers, no DMA
+- Mode 0 only — no software-selectable mode
+- Polling only — no interrupt output
+- One CS_N — no multi-slave support
+- 12 MHz system clock assumed
 
 ---
 
